@@ -1,168 +1,120 @@
-MLFQ (Multi-Level Feedback Queue) CPU Scheduler
-📋 Overview
+# 🖥️ Multi-Level Feedback Queue (MLFQ) CPU Scheduler
 
-This implementation features a Two-Level Multi-Level Feedback Queue with the following characteristics:
+## 📋 Overview
 
-    Level 1 (High Priority Queue): Priority-based scheduling (lower priority number = higher priority)
+This project implements a **Two-Level Multi-Level Feedback Queue (MLFQ)** CPU Scheduler with:
 
-    Level 2 (Low Priority Queue): Round Robin scheduling with a time quantum
+- **Level 1 (High Priority Queue):** Preemptive Priority Scheduling  
+- **Level 2 (Low Priority Queue):** Round Robin Scheduling  
+- **Dispatcher Latency:** Context switching overhead  
+- **Priority Aging:** Prevents starvation in lower queue  
 
-    Dispatcher Latency: Context switch overhead time
+The scheduler simulates realistic OS-level scheduling behavior with full statistics tracking.
 
-    Priority Aging: Processes in the low priority queue gradually increase in priority to prevent starvation
+---
 
-⚙️ System Parameters
-text
+## ⚙️ System Parameters
 
-Dispatcher Latency (DL): 2 units
-Round Robin Quantum (Q): 6 units
+| Parameter            | Value  |
+|----------------------|--------|
+| Dispatcher Latency   | 2 units |
+| Round Robin Quantum  | 6 units |
 
-🏗️ Queue Structure
-text
+---
 
-┌─────────────────────┐
-│   HIGH PRIORITY     │ ← Priority Queue
-│   (Level 1)         │   (Lower number = Higher priority)
-├─────────────────────┤
-│   LOW PRIORITY      │ ← Round Robin Queue
-│   (Level 2)         │   (Quantum = 6 units)
-└─────────────────────┘
+## 🏗️ Queue Structure
 
-📊 Process Input Format
 
-Each process is defined with the following comma-separated values:
-text
+---
 
-ProcessName: ArrivalTime, Priority, CPU_Burst1, IO_Burst1, CPU_Burst2, IO_Burst2, ...
+## 📊 Process Input Format
 
-Example Process:
-text
+Each process is defined using comma-separated values:
+ProcessName:ArrivalTime,Priority,CPU1,IO1,CPU2,IO2,...
+
+
+### Example
 
 p1:0,1,5,7,3
 
-    p1 - Process name
 
-    0 - Arrival time
+| Field | Description |
+|-------|-------------|
+| p1    | Process Name |
+| 0     | Arrival Time |
+| 1     | Priority |
+| 5     | CPU Burst 1 |
+| 7     | I/O Burst |
+| 3     | CPU Burst 2 |
 
-    1 - Priority (1 is high priority)
+---
 
-    5 - First CPU burst
+## 🔄 Scheduling Rules
 
-    7 - First I/O burst
+### 1️⃣ Level 1: Priority Queue
 
-    3 - Second CPU burst
+- Lower number = Higher priority
+- Preemptive scheduling
+- All new processes enter here
+- Processes are demoted after exceeding CPU usage
 
-🔄 Scheduling Rules
-1. Priority Queue (Level 1)
+---
 
-    Lower priority number = Higher actual priority
+### 2️⃣ Level 2: Round Robin Queue
 
-    Preemptive priority scheduling
+- Quantum = 6 units
+- Non-preemptive inside quantum
+- Process runs until:
+  - CPU burst ends, or
+  - Quantum expires
+- Implements aging
 
-    New processes start in this queue
+---
 
-    Processes demoted to Level 2 after exceeding CPU usage
+### 3️⃣ Priority Aging
 
-2. Round Robin Queue (Level 2)
+- Level 2 processes gain **+1 priority every 20 units**
+- Prevents starvation
 
-    Fixed time quantum = 6 units
+---
 
-    Non-preemptive within quantum
+### 4️⃣ Dispatcher Operations
 
-    Processes complete current CPU burst or quantum
+- Context switch overhead = **2 units**
+- No latency when resuming after I/O
 
-    Implements priority aging to prevent starvation
+---
 
-3. Priority Aging
+### 5️⃣ I/O Operations
 
-    Processes in Level 2 gain +1 priority every 20 time units
+- Process leaves CPU immediately
+- Enters I/O queue
+- Returns to Level 1 after completion
 
-    Aging prevents indefinite starvation in lower queue
+---
 
-4. Dispatcher Operations
-
-    Context switch time = 2 units (applied when switching between different processes)
-
-    No dispatcher latency when resuming same process after I/O
-
-5. I/O Operations
-
-    When process issues I/O request:
-
-        It leaves CPU immediately
-
-        Goes to I/O queue
-
-        After I/O completion, returns to Priority Queue (Level 1)
-
-📈 Algorithm Flowchart
-text
+## 📈 Scheduling Flow
 
 Process Arrives
-    ↓
-Enter Priority Queue (Level 1)
-    ↓
-Execute based on priority
-    ↓
-CPU burst complete? ──Yes──→ Execute I/O ──→ Return to Level 1
-    ↓ No
-Quantum expired? ──Yes──→ Demote to Level 2
-    ↓ No
-Continue execution
-    ↓
-Preempted by higher priority? ──Yes──→ Go back to Level 1 queue
-    ↓ No
-Process completes ──→ Terminate
+↓
+Enter Level 1 Queue
+↓
+Execute (Priority Based)
+↓
+CPU Burst Complete? ──Yes──→ I/O → Return to Level 1
+↓ No
+Quantum Expired? ──Yes──→ Demote to Level 2
+↓ No
+Continue
+↓
+Preempted? ──Yes──→ Back to Level 1
+↓ No
+Finished ──→ Terminate
 
-🎯 Example Execution
 
-Given the input:
-text
+---
 
-2       # Dispatcher Latency
-6       # Quantum
-p1:0,1,5,7,3
-p2:14,3,11
-p3:12,0,4,2,8
-p4:20,2,8,5,5
-p5:26,4,9
-
-Initial Process States:
-Process	Arrival	Priority	CPU Bursts	I/O Bursts
-p1	0	1	5, 3	7
-p2	14	3	11	-
-p3	12	0	4, 8	2
-p4	20	2	8, 5	5
-p5	26	4	9	-
-📊 Performance Metrics Calculated
-
-The simulator tracks:
-
-    Turnaround Time: Completion time - Arrival time
-
-    Waiting Time: Total time spent waiting in ready queues
-
-    Response Time: First time getting CPU - Arrival time
-
-    CPU Utilization: Percentage of time CPU was busy
-
-    Throughput: Number of processes completed per time unit
-
-🚀 How to Compile and Run
-Compilation:
-bash
-
-gcc -o mlfq mlfq_scheduler.c
-
-Execution:
-bash
-
-./mlfq
-# or with input file
-./mlfq < input.txt
-
-Input File Format:
-text
+## 🎯 Example Input
 
 2
 6
@@ -172,70 +124,56 @@ p3:12,0,4,2,8
 p4:20,2,8,5,5
 p5:26,4,9
 
-📝 Output Format
 
-The program provides detailed:
+---
 
-    Gantt Chart showing process execution timeline
+## 📊 Initial Process Table
 
-    Process-by-process statistics (Turnaround, Waiting, Response times)
+| Process | Arrival | Priority | CPU Bursts | I/O Bursts |
+|---------|---------|----------|------------|------------|
+| p1 | 0 | 1 | 5, 3 | 7 |
+| p2 | 14 | 3 | 11 | - |
+| p3 | 12 | 0 | 4, 8 | 2 |
+| p4 | 20 | 2 | 8, 5 | 5 |
+| p5 | 26 | 4 | 9 | - |
 
-    System averages for performance metrics
+---
 
-    Queue transitions showing process movement between levels
+## 📊 Performance Metrics
 
-🎯 Key Features Implemented
+The simulator calculates:
 
-    True MLFQ Behavior: Processes can move between queues
+- **Turnaround Time** = Completion − Arrival
+- **Waiting Time** = Time in Ready Queues
+- **Response Time** = First CPU − Arrival
+- **CPU Utilization**
+- **Throughput**
 
-    Aging Mechanism: Prevents starvation in lower queue
+---
 
-    Dispatcher Latency: Realistic context switch overhead
+## Input File Format
+DispatcherLatency
+Quantum
+Process1
+Process2
+...
 
-    I/O Handling: Proper I/O queue management
+## 🔍 Troubleshooting
+| Problem       | Solution                        |
+| ------------- | ------------------------------- |
+| Starvation    | Check aging (+1 every 20 units) |
+| High overhead | Reduce dispatcher latency       |
+| Poor response | Tune quantum                    |
+| Infinite loop | Check I/O transitions           |
 
-    Preemption: Higher priority processes can preempt lower ones
 
-    Statistics Tracking: Comprehensive performance metrics
+---
 
-📚 Theoretical Background
+If you’d like, I can also help you:
 
-MLFQ attempts to address several scheduling goals:
+✅ Customize it for your university format  
+✅ Add diagrams/images  
+✅ Convert it to PDF/LaTeX  
+✅ Write documentation for your report  
 
-    Minimize Response Time: For interactive processes (Level 1)
-
-    Maximize Throughput: For CPU-bound processes (Level 2)
-
-    Prevent Starvation: Through priority aging
-
-    Adapt to Process Behavior: CPU-bound processes sink to lower queue
-
-🔍 Troubleshooting Common Issues
-
-    Process starvation in Level 2? - Check aging mechanism (+1 priority every 20 units)
-
-    High dispatcher overhead? - Reduce dispatcher latency parameter
-
-    Poor response time? - Adjust quantum size or priority thresholds
-
-    Infinite loop? - Verify I/O completion and queue transitions
-
-🤝 Contributing
-
-To extend this implementation:
-
-    Add more queue levels
-
-    Implement different aging policies
-
-    Add visualization of queue states
-
-    Implement varying time quanta per level
-
-    Add more sophisticated I/O scheduling
-
-📄 License
-
-This educational implementation is open for academic use and modification.
-
-Note: This MLFQ implementation balances interactive response time with batch job throughput, making it suitable for general-purpose operating systems
+Just tell me 👍
